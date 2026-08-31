@@ -6,6 +6,13 @@ terraform {
       version = "6.62.0"
     }
   }
+  cloud {
+    organization = "jpaquette2323-Lab"
+
+    workspaces {
+      name = "aws-rdgw-alb-lab"
+    }
+  }
 }
 
 provider "aws" {

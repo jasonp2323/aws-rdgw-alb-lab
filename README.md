@@ -15,39 +15,7 @@ being the management account.
 
 ## High level
 
-```mermaid
-flowchart LR
-    subgraph NET["network account · 172106476397"]
-        direction TB
-        AD["AWS Managed Microsoft AD<br/>corp.theuptimestudio.co<br/><i>Standard, 2 AZs</i>"]
-        NAT["NAT gateway<br/><i>egress for every account</i>"]
-        R53["Route 53 Resolver<br/>inbound + outbound endpoints"]
-    end
-
-    subgraph TGW["Transit Gateway · shared via RAM"]
-        direction TB
-        RTS["<b>shared</b> route table<br/>sees all attachments"]
-        RTP["<b>spoke</b> route table<br/>sees only the network VPC<br/>+ default route out"]
-    end
-
-    subgraph WL["workload account · 594775506233"]
-        direction TB
-        WIN["Windows Server 2022<br/><i>domain joined via SSM</i>"]
-    end
-
-    NET <--> RTS
-    RTP <--> WL
-    RTS -.->|"propagated"| RTP
-
-    WIN -.->|"① DNS for corp.*"| R53
-    WIN -.->|"② Kerberos / LDAP / SMB"| AD
-    WIN -.->|"③ internet egress"| NAT
-
-    SPOKE2["future spoke"]:::ghost
-    SPOKE2 -.-> RTP
-
-    classDef ghost stroke-dasharray: 4 4,opacity:0.55
-```
+![Identity isolation lab — high-level architecture](docs/architecture-high-level.svg)
 
 The **spoke** route table is the isolation boundary. It carries a route to the
 network VPC and a default route for egress, and nothing else — so a second spoke
@@ -55,65 +23,7 @@ added tomorrow can reach identity and the internet, but not this one.
 
 ## Detail
 
-```mermaid
-flowchart TB
-    subgraph NETACC["network account · 10.20.0.0/16"]
-        IGW(["Internet gateway"])
-
-        subgraph NPUB["public subnets · 10.20.32.0/20, 10.20.48.0/20"]
-            NATGW["NAT gateway<br/><i>single</i>"]
-        end
-
-        subgraph NPRIV["private subnets · 10.20.0.0/20, 10.20.16.0/20"]
-            DC["Domain controllers<br/>ENIs + directory SG"]
-            EPIN["Resolver <b>inbound</b><br/>endpoint"]
-            EPOUT["Resolver <b>outbound</b><br/>endpoint"]
-            ATTN["TGW attachment"]
-        end
-
-        RTPUB["public route table<br/>0.0.0.0/0 → IGW<br/>10.0.0.0/8 → TGW"]
-        RTPRIV["private route table<br/>0.0.0.0/0 → NAT<br/>10.0.0.0/8 → TGW"]
-        DHCP["DHCP option set<br/>DNS → domain controllers"]
-    end
-
-    subgraph HUB["Transit Gateway"]
-        SHARED["<b>shared</b> RT<br/>← network attachment associated<br/>← all attachments propagate"]
-        SPOKE["<b>spoke</b> RT<br/>← spoke attachments associated<br/>10.20.0.0/16 propagated<br/>0.0.0.0/0 → network attachment"]
-    end
-
-    subgraph WLACC["workload account · 10.30.0.0/16"]
-        subgraph WPRIV["private subnets only · 10.30.0.0/20, 10.30.16.0/20"]
-            EC2["Windows Server 2022<br/>no key pair · no ingress"]
-            ATTW["TGW attachment<br/><i>accepted in network account</i>"]
-        end
-        RTW["private route tables<br/>0.0.0.0/0 → TGW"]
-    end
-
-    NATGW --> IGW
-    RTPUB -.- NPUB
-    RTPRIV -.- NPRIV
-    DHCP -.- NPRIV
-
-    ATTN === SHARED
-    ATTN -.->|propagates| SPOKE
-    ATTW === SPOKE
-    ATTW -.->|propagates| SHARED
-
-    RTW -.- WPRIV
-    EC2 --> RTW
-    RTPRIV --> NATGW
-
-    EPOUT -->|"forward corp.* :53"| DC
-    EPIN -->|"resolves via VPC resolver<br/>+ the same rule"| EPOUT
-
-    RAM1{{"RAM: Transit Gateway"}}
-    RAM2{{"RAM: Resolver rule"}}
-    DS{{"Directory sharing<br/>HANDSHAKE + accepter"}}
-
-    HUB -.- RAM1 -.-> WLACC
-    NETACC -.- RAM2 -.-> WLACC
-    NETACC -.- DS -.-> WLACC
-```
+![Identity isolation lab — detailed architecture](docs/architecture-detail.svg)
 
 ### How the workload instance resolves `corp.theuptimestudio.co`
 
@@ -192,3 +102,10 @@ Expect the directory itself to take a while.
 
 Layout, conventions, and the traps worth knowing before editing are in
 **[AGENTS.md](AGENTS.md)**.
+
+The diagrams are generated, not hand-drawn — colours follow the AWS Architecture
+Icons palette. Edit `docs/diagrams.py` and re-run it to regenerate both SVGs:
+
+```bash
+python3 docs/diagrams.py
+```

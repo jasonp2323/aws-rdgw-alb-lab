@@ -55,6 +55,7 @@ Region is `us-east-1`. Both accounts are in organization `o-jxhjz490ll`, with
 | `workload-dns.tf`       | Resolver rule association against the workload VPC                                  |
 | `workload-instance.tf`  | Windows Server 2022 instance, its security group, SSM seamless domain join          |
 | `outputs.tf`            | IDs worth having after an apply                                                    |
+| `docs/diagrams.py`      | Generates both architecture SVGs. Edit and re-run; do not hand-edit the SVGs.       |
 
 Split is by **account first, concern second**. A new spoke account gets its own
 `<spoke>-*.tf` files; it does not get folded into the workload ones.
