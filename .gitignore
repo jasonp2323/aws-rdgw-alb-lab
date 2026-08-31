@@ -1,0 +1,4 @@
+.mcp.json
+.terraform
+terraform.tfvars
+terraform.tfstate

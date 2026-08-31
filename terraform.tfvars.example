@@ -1,0 +1,5 @@
+# Copy to terraform.tfvars and set a password before the first apply.
+# AWS does not store this and cannot return it -- keep your own copy.
+#
+# 8-64 characters, and at least 3 of: lowercase, uppercase, digit, special.
+directory_admin_password = "ChangeMe-Lab-2026!"
