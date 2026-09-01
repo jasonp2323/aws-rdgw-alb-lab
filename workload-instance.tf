@@ -85,8 +85,12 @@ module "workload_instance" {
 # minted in the workload account when the network account shared the directory,
 # not the network account's own d-xxxx.
 #
-# dnsIpAddresses is passed explicitly so the join does not depend on DNS having
-# converged first, though the resolver rule makes it work either way.
+# dnsIpAddresses is deliberately NOT passed. The document types it as a
+# StringList, but aws_ssm_association.parameters is map(string) and the provider
+# wraps each value in a single-element list -- so two DNS IPs cannot be
+# expressed here at all (a comma-joined string fails the document's per-item IP
+# regex). It is optional anyway: the instance resolves the AD zone through the
+# resolver rule associated with this VPC, which the depends_on below enforces.
 ################################################################################
 
 resource "aws_ssm_association" "domain_join" {
@@ -101,9 +105,8 @@ resource "aws_ssm_association" "domain_join" {
   }
 
   parameters = {
-    directoryId    = aws_directory_service_shared_directory.workload.shared_directory_id
-    directoryName  = var.domain_name
-    dnsIpAddresses = join(",", aws_directory_service_directory.this.dns_ip_addresses)
+    directoryId   = aws_directory_service_shared_directory.workload.shared_directory_id
+    directoryName = var.domain_name
   }
 
   depends_on = [
