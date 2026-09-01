@@ -14,6 +14,13 @@ resource "aws_route53_resolver_rule_association" "workload" {
   resolver_rule_id = aws_route53_resolver_rule.corp.id
   vpc_id           = module.workload_vpc.vpc_id
 
-  # The rule is not visible in this account until RAM has shared it.
-  depends_on = [aws_ram_principal_association.resolver_rule]
+  # The rule is not visible in this account until RAM has shared it. Both
+  # associations are required and neither depends on the other: the principal
+  # association grants this account the share, the resource association puts the
+  # rule *into* it. Waiting on only one races the other and fails with
+  # RSLVR-00703 "resolver rule does not exist".
+  depends_on = [
+    aws_ram_principal_association.resolver_rule,
+    aws_ram_resource_association.resolver_rule,
+  ]
 }

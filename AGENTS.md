@@ -96,9 +96,22 @@ so no existing routing is touched.
   account as the rule. The inbound endpoint cannot serve that role. See the
   comment block at the top of `network-dns.tf` for why the rule targets the
   domain controllers directly rather than the inbound endpoint.
+- **A RAM share is two independent associations.** `aws_ram_principal_association`
+  grants an account the share; `aws_ram_resource_association` puts the resource
+  into it. Neither depends on the other, so Terraform runs them in parallel.
+  Anything in the spoke that consumes the shared resource must `depends_on`
+  **both** — waiting on only the principal association races the resource one and
+  fails with `RSLVR-00703 ... does not exist` (or the equivalent for whatever is
+  being shared).
 - **The SSM join uses the *shared* directory ID**, not the network account's
   `d-xxxx`. `aws_directory_service_shared_directory.workload.shared_directory_id`
   is the identifier minted in the workload account.
+- **`aws_ssm_association` cannot pass a StringList parameter.** Its `parameters`
+  argument is `map(string)` and the provider wraps each value in a
+  single-element list, so any SSM document parameter typed `StringList` can
+  carry exactly one value. Joining with commas does not work -- the document
+  validates each element. This is why `dnsIpAddresses` is omitted from the
+  domain join; the resolver rule covers it.
 - **Directory creation takes 20-45 minutes.** A full apply is roughly 30-50
   minutes, most of it waiting on Managed AD.
 
